@@ -99,7 +99,7 @@ public partial class MainView : UserControl
                 var text = pomosna.Split(',');
                 if (text.Length >= 5)
                 {
-                    float.TryParse(text[3], out firstVariable);
+                    float.TryParse(text[4], out firstVariable);
 
                     float.TryParse(text[5], out secondVariable);
                 }
@@ -129,7 +129,7 @@ public partial class MainView : UserControl
                 firstVariable /= 1.8f;
                 secondVariable /= 1.8f;
                 #endregion
-                simulator.Mouse.MoveMouseBy((int)-secondVariable, (int)firstVariable);
+                simulator.Mouse.MoveMouseBy((int)-firstVariable, (int)secondVariable);
 
                 //    SerialOut.Text = $"{-(int)(y / 5 +0.4)}  {(int)(x/5 +1.15)}";
             });

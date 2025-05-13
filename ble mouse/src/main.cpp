@@ -20,7 +20,7 @@ GY521 sensor(0x68);
 
 // 08:3a:f2:52:28:64
 //  REPLACE WITH YOUR RECEIVER MAC Address
-uint8_t broadcastAddress[] = {0x08, 0x3a, 0xf2, 0x52, 0x28, 0x64};
+uint8_t broadcastAddress[] = {0x78, 0x21, 0x84, 0xc6, 0x94, 0x40};
 
 // Structure example to send data
 // Must match the receiver structure
