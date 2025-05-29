@@ -2,16 +2,14 @@
 using System.Diagnostics;
 using System.IO.Ports;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
-using Avalonia.Notification;
 using Avalonia.Threading;
+using RJCP.IO.Ports;
 using Serilog;
+using Serilog.Core;
+using Serilog.Events;
 using WindowsInput;
-using WindowsInput.Native;
-
 
 namespace GetStartedApp.Views;
 
@@ -20,177 +18,249 @@ public partial class MainView : UserControl
     public MainView()
     {
         InitializeComponent();
+
         Log.Logger = new LoggerConfiguration()
             .MinimumLevel.Debug()
             .WriteTo.File("logs/myapp.txt", rollingInterval: RollingInterval.Day)
+            .WriteTo.Sink(new TextBoxSink(AppendLog))
             .CreateLogger();
         Log.Information("Application started");
-    }
-    SerialPort serialPort = new SerialPort();
-    private void Button_OnClick(object? sender, RoutedEventArgs e)
-    {
-        if (double.TryParse(Celsius.Text, out double C))
-        {
-            var F = C * (9d / 5d) + 32;
-            Fahrenheit.Text = F.ToString("0.0");
-        }
-        else
-        {
-            Celsius.Text = "0";
-            Fahrenheit.Text = "0";
-        }
-        DropDown.Items.Clear();
-    }
+        Refresh_Click(null, new RoutedEventArgs());
 
-    private async void Refresh_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    }
+    SerialPort _serialPort = new SerialPort();
+
+
+    private void Refresh_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
+        Log.Information("Serial ports refreshed");
         DropDown.Items.Clear();
         //var serport = new SerialPort(DropDown.SelectedItem as string);
-        foreach (var item in SerialPort.GetPortNames())
+        foreach (var item in SerialPortStream.GetPortDescriptions())
         {
             DropDown.Items.Add(item);
         }
 
 
-        return;
     }
 
     private void Connect_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
-        if (serialPort is null)
-            serialPort = new SerialPort();
-        if (serialPort.IsOpen)
+        if (_serialPort is null)
+            _serialPort = new SerialPort();
+        if (_serialPort.IsOpen)
             return;
 
-        serialPort.PortName = DropDown.SelectedItem as string;
-        serialPort.BaudRate = 115200;
-        serialPort.DataReceived += SerialPort_DataReceived;
+        if (DropDown.SelectedItem is null)
+        {
+            Log.Warning("No port selected!");
+            return;
+        }
+        _serialPort.PortName = (DropDown.SelectedItem as PortDescription).Port;
+        _serialPort.BaudRate = 115200;
+        _serialPort.DataReceived += SerialPort_DataReceived;
+        _serialPort.ErrorReceived += _serialPort_ErrorReceived;
+        try
+        {
+
+            _serialPort.Open();
+            Log.Information("Connected to serial port");
+            _serialPort.DiscardOutBuffer();
+            _serialPort.DiscardInBuffer();
+        }
+        catch (Exception exception)
+        {
+            Log.Warning("Cannot open serial port!");
+            Log.Debug(exception.Message);
+        }
 
 
-        serialPort.Open();
     }
 
+    private void _serialPort_ErrorReceived(object? sender, System.IO.Ports.SerialErrorReceivedEventArgs e)
+    {
+        Log.Error("serial port error " + e.EventType);
+    }
 
     bool processing = false;
     InputSimulator simulator = new InputSimulator();
     int numberOfSamples = 0;
     float[] samplesX = new float[1000], samplesY = new float[1000];
-
-    float firstVariable = 0, secondVariable = 0;
-    float firstVarPrev = 0, secondVarPrev = 0;
-    float angX = -3.2f, posX = 0;
-    float angY = 3.2f , posY = 0;
-    float Dt = 0.01f;
-
-
-    private async void SerialPort_DataReceived(object sender, SerialDataReceivedEventArgs e)
+    decimal firstsum = 0, secondsum = 0;
+    private async void SerialPort_DataReceived(object sender, System.IO.Ports.SerialDataReceivedEventArgs e)
     {
-        var port = sender as SerialPort;
+        //   var _serialPort = sender as SerialPort;
 
 
-        if (!processing)
+        //  if (!processing)
+        //   {
+        //   processing = true;
+
+
+
+        //       if (_serialPort is null)
+        //           return;
+        //       if (!_serialPort.IsOpen)
+        //           return;
+        try
         {
-            processing = true;
-
-
-            await Dispatcher.UIThread.InvokeAsync(async () =>
+            var pomosna = _serialPort.ReadLine();
+            if (pomosna[0] == 'B')
             {
-                if (port is null)
-                    return;
-                if (!port.IsOpen)
-                    return;
-
-                var pomosna = port.ReadLine();
-
-                firstVarPrev = firstVariable;
-                secondVarPrev = secondVariable;
-                
-                var text = pomosna.Split(',');
-                if (text.Length >= 5)
+                if (pomosna[4] == '1')
                 {
-
-                    float.TryParse(text[4], out firstVariable);
-
-                    float.TryParse(text[5], out secondVariable);
-                }
-                //za kalibracija na offset
-                #region Calibration
-                /*if (numberOfSamples < 500)
-                {
-                    samplesX[numberOfSamples] = x;
-                    samplesY[numberOfSamples] = y;
-                    numberOfSamples++;
+                    simulator.Mouse.LeftButtonDown();
                 }
                 else
-                    SerialOut.Text = $"avgX {(samplesX.Sum() / 500)}  avgY {(samplesY.Sum() / 500)}";
-                */
-                firstVariable = firstVariable + 3.052f;
-                secondVariable = secondVariable + 1.11f;
-                #endregion
+                {
+                    simulator.Mouse.LeftButtonUp();
+                }
+                return;
+            }
 
-                #region Deadzone
-                if (Math.Abs(firstVariable) < 2)
-                    firstVariable = 0;
-                if (Math.Abs(secondVariable) < 2)
-                    secondVariable = 0;
-                #endregion
+            float firstVariable = 0, secondVariable = 0;
+            var text = pomosna.Split(',');
+            if (text.Length >= 6)
+            {
+                float.TryParse(text[4], out firstVariable);
 
-                #region speed
-                firstVariable /= 2.8f; // og 1.8
-                secondVariable /= 1.8f;
-                #endregion
+                float.TryParse(text[5], out secondVariable);
+            }
+            //za kalibracija na offset
 
-                #region luka
+            #region Calibration
+            // avgX -0.64788  avgY -2.20256
+            if (numberOfSamples < 500)
+            {
+                samplesX[numberOfSamples] = firstVariable;
+                samplesY[numberOfSamples] = secondVariable;
+                numberOfSamples++;
+            }
+            else
+            {
+                if (numberOfSamples == 500) Log.Information($"avgX {(samplesX.Sum() / 500f)}  avgY {(samplesY.Sum() / 500f)}");
+                numberOfSamples++;
+            }
 
+            firstVariable = firstVariable + 2.84788f;
+            secondVariable = secondVariable + 0.60256f;
+            #endregion
 
+            #region Deadzone
+            if (Math.Abs(firstVariable) < 2)
+                firstVariable = 0;
+            if (Math.Abs(secondVariable) < 2)
+                secondVariable = 0;
+            #endregion
 
-                angX = angX + firstVariable * Dt;
-                angY = angY + secondVariable * Dt;
-                posX = 10000 * angX;
-                posY = 10000 * angY;
+            if (firstVariable == 0 && secondVariable == 0)
+                return;
 
-                string Outxy = $" posX = {posX.ToString()}, PosY = {posY.ToString()} ";
-                SerialOut.Text =Outxy;
+            #region speed
 
+            #endregion
 
-                simulator.Mouse.MoveMouseTo(-(int)posX, (int)posY);
+            #region implementation
 
+            if (imp == Implementation.Direktno)
+            {
+                firstVariable /= 2f;
+                secondVariable /= 2f;
+                simulator.Mouse.MoveMouseBy((int)-firstVariable, (int)secondVariable);
+            }
+            if (imp == Implementation.SoIntegracija)
+            {
+                firstVariable *= 2f;
+                secondVariable *= 2f;
 
+                firstsum += (decimal)-firstVariable;
+                secondsum += (decimal)secondVariable;
+                Debug.WriteLine($"firstsum: {firstsum} secondsum: {secondsum}");
+                simulator.Mouse.MoveMouseTo((double)firstsum, (double)secondsum);
+            }
 
+            #endregion
+            //    SerialOut.Text = $"{-(int)(y / 5 +0.4)}  {(int)(x/5 +1.15)}";
 
-
-                #endregion
-               // simulator.Mouse.MoveMouseBy((int)-firstVariable, (int)secondVariable);
-
-                //    SerialOut.Text = $"{-(int)(y / 5 +0.4)}  {(int)(x/5 +1.15)}";
-            });
-
-
-            processing = false;
         }
+        catch (Exception ex)
+        {
+            if (_serialPort.IsOpen)
+            {
+                Log.Error("Failed to process serial recived event");
+                Log.Debug(ex.ToString());
+            }
+        }
+
+
+        //  processing = false;
+        //  }
         //flush old data
-        if (port is null)
-            return;
-        if (!port.IsOpen)
-            return;
-        if (port.BytesToRead > 50)
-            port.ReadLine();
+        //  if (_serialPort is null)
+        //      return;
+        //   if (!_serialPort.IsOpen)
+        //       return;
+        //  if (_serialPort.BytesToRead > 50)
+        //      _serialPort.ReadLine();
 
 
     }
+
+    enum Implementation
+    {
+        None = 0,
+        /// <summary>
+        /// vrednostite od giroskopo direktno sa staveni da mrda gluvceto relativno
+        /// </summary>
+        Direktno = 1,
+        /// <summary>
+        /// vrednostite od giroskopo se sumiraa 
+        /// </summary>
+        SoIntegracija = 2
+    }
+    readonly Implementation imp = Implementation.SoIntegracija;
 
     private void Discconect_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
-        if (serialPort is not null)
-            if (serialPort.IsOpen)
+        var prev = _serialPort.IsOpen;
+        if (_serialPort is not null)
+            if (_serialPort.IsOpen)
             {
-                serialPort.Close();
+                _serialPort.Close();
             }
+        Log.Information($"Serial Port closing from {prev} to {_serialPort.IsOpen}");
     }
 
-    private async void Button_Click_1(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+
+    public void AppendLog(string message)
     {
-       
+        if (LogTextBox != null)
+        {
+            // Make sure we are on the UI thread
+            Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+            {
+                LogTextBox.Text += message;
+                LogTextBox.CaretIndex = LogTextBox.Text.Length; // scroll to end
+            });
+        }
     }
-  
+
+}
+
+public class TextBoxSink : ILogEventSink
+{
+    private readonly Action<string> _logAction;
+    private readonly IFormatProvider? _formatProvider;
+
+    public TextBoxSink(Action<string> logAction, IFormatProvider? formatProvider = null)
+    {
+        _logAction = logAction;
+        _formatProvider = formatProvider;
+    }
+
+    public void Emit(LogEvent logEvent)
+    {
+        var message = logEvent.RenderMessage(_formatProvider);
+        _logAction?.Invoke($"->{DateTime.Now} [{logEvent.Level}] {message}\n");
+    }
 }

@@ -21,6 +21,7 @@
     <PackageReference Include="Serilog" Version="4.2.0" />
     <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
     <PackageReference Include="System.IO.Ports" Version="9.0.4" />
-
+    <PackageReference Include="System.Management" Version="9.0.5" />
+	  <PackageReference Include="SerialPortStream" Version="2.4.2" />
   </ItemGroup>
 </Project>

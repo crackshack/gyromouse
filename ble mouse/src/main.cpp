@@ -13,14 +13,15 @@ bibliotekata za senzoro i nacino na komunikacija sa tolku mn testirani i probava
 
 #include <Wire.h>
 #include "GY521.h"
-#define DEBUG 0
+#define DEBUG 1
 #include <esp_now.h>
 #include <WiFi.h>
 GY521 sensor(0x68);
 
-// 08:3a:f2:52:28:64
+// 08:3a:f2:52:28:64 - za esp32
+// 30:ed:a0:bb:21:04 - za esp32s3
 //  REPLACE WITH YOUR RECEIVER MAC Address
-uint8_t broadcastAddress[] = {0x78, 0x21, 0x84, 0xc6, 0x94, 0x40};
+uint8_t broadcastAddress[] = {0x30, 0xed, 0xa0, 0xbb, 0x21, 0x04};
 
 // Structure example to send data
 // Must match the receiver structure
@@ -42,8 +43,11 @@ esp_now_peer_info_t peerInfo;
 // callback when data is sent
 void OnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status)
 {
-  Serial.print("\r\nLast Packet Send Status:\t");
-  Serial.println(status == ESP_NOW_SEND_SUCCESS ? "Delivery Success" : "Delivery Fail");
+  if (!DEBUG)
+  {
+    Serial.print("\r\nLast Packet Send Status:\t");
+    Serial.println(status == ESP_NOW_SEND_SUCCESS ? "Delivery Success" : "Delivery Fail");
+  }
 }
 
 void setup()
@@ -60,8 +64,8 @@ void setup()
     delay(1000);
   }
   Serial.println("skiping connecting to gy521 oti testiram ble");
-  sensor.setAccelSensitivity(0); //  2g
-  sensor.setGyroSensitivity(0);  //  250 degrees/s
+  sensor.setAccelSensitivity(3); //  2g
+  sensor.setGyroSensitivity(3);  //  250 degrees/s
 
   sensor.setThrottle();
   Serial.println("start...");
@@ -119,16 +123,26 @@ void loop()
   myData.gy = gy;
   myData.gz = gz;
 
+  if (DEBUG)
+  {
+    Serial.printf(">ax:%2f\r\n", ax);
+    Serial.printf(">ay:%2f\r\n", ay);
+    Serial.printf(">az:%2f\r\n", az);
+    Serial.printf(">gx:%2f\r\n", gx);
+    Serial.printf(">gy:%2f\r\n", gy);
+    Serial.printf(">gz:%2f\r\n", gz);
+  }
+
   // Send message via ESP-NOW
   esp_err_t result = esp_now_send(broadcastAddress, (uint8_t *)&myData, sizeof(myData));
-
-  if (result == ESP_OK)
-  {
-    Serial.println("Sent with success");
-  }
-  else
-  {
-    Serial.println("Error sending the data");
-  }
+  if (!DEBUG)
+    if (result == ESP_OK)
+    {
+      Serial.println("Sent with success");
+    }
+    else
+    {
+      Serial.println("Error sending the data");
+    }
   delay(10);
 }
