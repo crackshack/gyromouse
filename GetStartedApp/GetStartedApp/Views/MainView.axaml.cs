@@ -76,6 +76,13 @@ public partial class MainView : UserControl
     int numberOfSamples = 0;
     float[] samplesX = new float[1000], samplesY = new float[1000];
 
+    float firstVariable = 0, secondVariable = 0;
+    float firstVarPrev = 0, secondVarPrev = 0;
+    float angX = -3.2f, posX = 0;
+    float angY = 3.2f , posY = 0;
+    float Dt = 0.01f;
+
+
     private async void SerialPort_DataReceived(object sender, SerialDataReceivedEventArgs e)
     {
         var port = sender as SerialPort;
@@ -95,10 +102,13 @@ public partial class MainView : UserControl
 
                 var pomosna = port.ReadLine();
 
-                float firstVariable = 0, secondVariable = 0;
+                firstVarPrev = firstVariable;
+                secondVarPrev = secondVariable;
+                
                 var text = pomosna.Split(',');
                 if (text.Length >= 5)
                 {
+
                     float.TryParse(text[4], out firstVariable);
 
                     float.TryParse(text[5], out secondVariable);
@@ -126,10 +136,31 @@ public partial class MainView : UserControl
                 #endregion
 
                 #region speed
-                firstVariable /= 1.8f;
+                firstVariable /= 2.8f; // og 1.8
                 secondVariable /= 1.8f;
                 #endregion
-                simulator.Mouse.MoveMouseBy((int)-firstVariable, (int)secondVariable);
+
+                #region luka
+
+
+
+                angX = angX + firstVariable * Dt;
+                angY = angY + secondVariable * Dt;
+                posX = 10000 * angX;
+                posY = 10000 * angY;
+
+                string Outxy = $" posX = {posX.ToString()}, PosY = {posY.ToString()} ";
+                SerialOut.Text =Outxy;
+
+
+                simulator.Mouse.MoveMouseTo(-(int)posX, (int)posY);
+
+
+
+
+
+                #endregion
+               // simulator.Mouse.MoveMouseBy((int)-firstVariable, (int)secondVariable);
 
                 //    SerialOut.Text = $"{-(int)(y / 5 +0.4)}  {(int)(x/5 +1.15)}";
             });
