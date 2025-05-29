@@ -4,12 +4,11 @@ using System.IO.Ports;
 using System.Linq;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
-using Avalonia.Threading;
 using RJCP.IO.Ports;
 using Serilog;
 using Serilog.Core;
 using Serilog.Events;
-using WindowsInput;
+using SharpHook;
 
 namespace GetStartedApp.Views;
 
@@ -83,7 +82,7 @@ public partial class MainView : UserControl
     }
 
     bool processing = false;
-    InputSimulator simulator = new InputSimulator();
+    EventSimulator simulator = new EventSimulator();
     int numberOfSamples = 0;
     float[] samplesX = new float[1000], samplesY = new float[1000];
     decimal firstsum = 0, secondsum = 0;
@@ -109,11 +108,11 @@ public partial class MainView : UserControl
             {
                 if (pomosna[4] == '1')
                 {
-                    simulator.Mouse.LeftButtonDown();
+                    simulator.SimulateMousePress(SharpHook.Data.MouseButton.Button1);
                 }
                 else
                 {
-                    simulator.Mouse.LeftButtonUp();
+                    simulator.SimulateMouseRelease(SharpHook.Data.MouseButton.Button1);
                 }
                 return;
             }
@@ -166,17 +165,17 @@ public partial class MainView : UserControl
             {
                 firstVariable /= 2f;
                 secondVariable /= 2f;
-                simulator.Mouse.MoveMouseBy((int)-firstVariable, (int)secondVariable);
+                simulator.SimulateMouseMovementRelative((short)-firstVariable, (short)secondVariable);
             }
             if (imp == Implementation.SoIntegracija)
             {
-                firstVariable *= 2f;
-                secondVariable *= 2f;
+                firstVariable *= 1f;
+                secondVariable *= 1f;
 
                 firstsum += (decimal)-firstVariable;
                 secondsum += (decimal)secondVariable;
                 Debug.WriteLine($"firstsum: {firstsum} secondsum: {secondsum}");
-                simulator.Mouse.MoveMouseTo((double)firstsum, (double)secondsum);
+                simulator.SimulateMouseMovement((short)firstsum, (short)secondsum);
             }
 
             #endregion
@@ -218,7 +217,7 @@ public partial class MainView : UserControl
         /// </summary>
         SoIntegracija = 2
     }
-    readonly Implementation imp = Implementation.SoIntegracija;
+    readonly Implementation imp = Implementation.Direktno;
 
     private void Discconect_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
