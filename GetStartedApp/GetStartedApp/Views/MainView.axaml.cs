@@ -55,7 +55,7 @@ public partial class MainView : UserControl
             Log.Warning("No port selected!");
             return;
         }
-        _serialPort.PortName = (DropDown.SelectedItem as PortDescription).Port;
+        _serialPort.PortName = ((PortDescription)DropDown.SelectedItem).Port;
         _serialPort.BaudRate = 115200;
         _serialPort.DataReceived += SerialPort_DataReceived;
         _serialPort.ErrorReceived += _serialPort_ErrorReceived;
@@ -81,12 +81,12 @@ public partial class MainView : UserControl
         Log.Error("serial port error " + e.EventType);
     }
 
-    bool processing = false;
+ 
     EventSimulator simulator = new EventSimulator();
     int numberOfSamples = 0;
     float[] samplesX = new float[1000], samplesY = new float[1000];
     decimal firstsum = 0, secondsum = 0;
-    private async void SerialPort_DataReceived(object sender, System.IO.Ports.SerialDataReceivedEventArgs e)
+    private  void SerialPort_DataReceived(object sender, System.IO.Ports.SerialDataReceivedEventArgs e)
     {
         //   var _serialPort = sender as SerialPort;
 
@@ -95,7 +95,8 @@ public partial class MainView : UserControl
         //   {
         //   processing = true;
 
-
+        
+        
 
         //       if (_serialPort is null)
         //           return;
@@ -243,6 +244,7 @@ public partial class MainView : UserControl
             });
         }
     }
+    
 
 }
 

@@ -32,7 +32,7 @@
 
 			<TextBlock Name="SerialOut"  HorizontalAlignment="Center" >Text</TextBlock>
 
-
+			<TextBlock Name="DeviceStatus" >🟡 Ready</TextBlock>
 			
 		</StackPanel>
 		<GridSplitter Grid.Column="1" Background="Red"></GridSplitter>

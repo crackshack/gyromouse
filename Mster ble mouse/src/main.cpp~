@@ -44,21 +44,6 @@ void OnDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len)
 
 void setup()
 {
-/* ke se prfrli na komunikacija so usb hid
- * raboti so adafruit tinyusb
- * vidi dali tocno si go namestil parametrite za usb
- * vo USBDeview
- * posle so hidSharp se povrzi i bi trebalo da raboti
- *
- * informacii se prastaa koga uredo dobie report i vrne
- * funcijata sho e za samo prastanje ne moga da ja razbera zaso e igasena/sho se pravi so nea
- * 
- *
- *
- 
- */
-
-
   // Initialize Serial Monitor
   Serial.begin(115200);
 

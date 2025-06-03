@@ -22,6 +22,7 @@ public partial class App : Application
             {
                 DataContext = new MainViewModel()
             };
+            
         }
         else if (ApplicationLifetime is ISingleViewApplicationLifetime singleViewPlatform)
         {
@@ -33,4 +34,5 @@ public partial class App : Application
 
         base.OnFrameworkInitializationCompleted();
     }
+
 }
