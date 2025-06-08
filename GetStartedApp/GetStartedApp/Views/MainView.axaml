@@ -11,7 +11,7 @@
          to set the actual DataContext for runtime, set the DataContext property in code (look at App.axaml.cs) -->
 		<vm:MainViewModel />
 	</Design.DataContext>
-	<Grid ColumnDefinitions="*,8,600" RowDefinitions="*">
+	<Grid ColumnDefinitions="2*,8,*" RowDefinitions="*">
 		<StackPanel Grid.Column="0">
 			<Border Margin="5" CornerRadius="10" Background="LightBlue">
 				<TextBlock Margin="5"
@@ -33,7 +33,12 @@
 			<TextBlock Name="SerialOut"  HorizontalAlignment="Center" >Text</TextBlock>
 
 			<TextBlock Name="DeviceStatus" >🟡 Ready</TextBlock>
-			
+
+			<TextBlock Text="{Binding Value,ElementName= MouseSpeed }" Margin="10" >Label x:</TextBlock>
+			<Slider  Name="MouseSpeed" Value="1" Margin="10" Minimum="0" Maximum="5"></Slider>
+			<ComboBox Name="ImplementationDisp" SelectionChanged="ImplementationDisp_SelectionChanged" Margin="10"  MaxDropDownHeight="100">
+				
+			</ComboBox>
 		</StackPanel>
 		<GridSplitter Grid.Column="1" Background="Red"></GridSplitter>
 		<StackPanel Grid.Column="2" Margin="5" >
