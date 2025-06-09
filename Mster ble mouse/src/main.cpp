@@ -22,7 +22,23 @@ void loop() {}
 USBHIDVendor Vendor;
 USBHIDMouse Mouse;
 USBHIDKeyboard Keyboard;
+USBHIDAbsoluteMouse AbsMouse;
 
+enum MouseModes
+{
+  None = 0,
+  Calibration = 1,
+  Direct = 2,
+  Integration = 3
+};
+
+class Configuration
+{
+public:
+  MouseModes mouseMode;
+};
+
+Configuration config;
 
 // Structure example to receive data
 // Must match the sender structure
@@ -90,17 +106,27 @@ void OnDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len)
   Serial.print(myData.gz);
   Serial.println();
 
-  uint8_t buffer[usbHIDVendorSize]={0};
-  buffer[0] = 0x05;
-  buffer[1] = 1;
-  for (size_t i = 0; i < len; i++)
+  switch (config.mouseMode)
   {
-    buffer[i + 2] = incomingData[i];
-  }
+  case Direct:
+    int8_t varx = -myData.gy - 3.11;
+    int8_t vary = myData.gz + 0.5;
 
-  
-    Vendor.write(buffer, sizeof(buffer));
-  
+    if (abs(varx) < 2)
+    {
+      varx = 0;
+    }
+    if (abs(vary) < 2)
+    {
+      vary = 0;
+    }
+
+    Mouse.move(varx, vary);
+    break;
+
+  default:
+    break;
+  }
 }
 
 void setup()
@@ -115,6 +141,8 @@ void setup()
    *
    *
    */
+
+  config.mouseMode = Direct;
 
   // Initialize Serial Monitor
   Serial.begin(115200);

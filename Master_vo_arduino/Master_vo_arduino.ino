@@ -25,6 +25,15 @@ USBHIDMouse Mouse;
 USBHIDKeyboard Keyboard;
 USBHIDAbsoluteMouse AbsMouse;
 
+enum MouseMode { OFF = 0,
+                 Direct = 1,
+                 Itegration = 2,
+                 Calibration = 3 };
+class Config {
+  MouseMode mouseMode = Direct;
+};
+
+Config config;
 
 // Structure example to receive data
 // Must match the sender structure
@@ -85,10 +94,17 @@ void OnDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len) {
   Serial.print(myData.gz);
   Serial.println();
 
-  int8_t varx = -myData.gy -3.11;
-  int8_t vary = myData.gz+0.5;
+  int8_t varx = -myData.gy - 3.11;
+  int8_t vary = myData.gz + 0.5;
+
+  switch (config.mouseMode) {
+    case MouseMode.Direct:
+
+    break;
   
- Mouse.move(varx,vary);
+  }
+
+  Mouse.move(varx, vary);
 }
 
 void setup() {
