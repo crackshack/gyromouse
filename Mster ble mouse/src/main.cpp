@@ -122,10 +122,10 @@ void OnDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len)
     }
 
     Mouse.move(varx, vary);
+
     break;
 
-  default:
-    break;
+  
   }
 }
 
