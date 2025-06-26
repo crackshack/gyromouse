@@ -21,7 +21,8 @@ GY521 sensor(0x68);
 // 08:3a:f2:52:28:64 - za esp32
 // 30:ed:a0:bb:21:04 - za esp32s3
 //  REPLACE WITH YOUR RECEIVER MAC Address
-uint8_t broadcastAddress[] = {0x30, 0xed, 0xa0, 0xbb, 0x21, 0x04};
+//uint8_t broadcastAddress[] = {0x30, 0xed, 0xa0, 0xbb, 0x21, 0x04};
+uint8_t broadcastAddress[] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 
 // Structure example to send data
 // Must match the receiver structure
@@ -39,6 +40,7 @@ typedef struct struct_message
 struct_message myData;
 
 esp_now_peer_info_t peerInfo;
+
 
 // callback when data is sent
 void OnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status)
@@ -107,6 +109,7 @@ void setup()
 
 void loop()
 {
+  
   sensor.read();
   float ax = sensor.getAccelX();
   float ay = sensor.getAccelY();
@@ -144,5 +147,5 @@ void loop()
     {
       Serial.println("Error sending the data");
     }
-  delay(10);
+ // delay(10);
 }

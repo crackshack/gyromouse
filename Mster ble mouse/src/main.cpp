@@ -19,10 +19,10 @@ void loop() {}
 #include "USBHIDMouse.h"
 #include "USBHIDKeyboard.h"
 #endif
-USBHIDVendor Vendor;
-USBHIDMouse Mouse;
-USBHIDKeyboard Keyboard;
-USBHIDAbsoluteMouse AbsMouse;
+USBHIDVendor *Vendor = NULL;
+USBHIDMouse *Mouse = NULL;
+USBHIDAbsoluteMouse *AbsMouse = NULL;
+USBHIDKeyboard *Keyboard = NULL;
 
 enum MouseModes
 {
@@ -35,7 +35,10 @@ enum MouseModes
 class Configuration
 {
 public:
-  MouseModes mouseMode;
+  MouseModes mouseMode = Integration;
+  bool triggerCalibration = false;
+  bool recenterTrigger = false;
+  bool enableMouse = true;
 };
 
 Configuration config;
@@ -77,7 +80,7 @@ static void vendorEventCallback(void *arg, esp_event_base_t event_base, int32_t 
       Serial.printf("HID VENDOR OUTPUT: len:%u\n", data->len);
       for (uint16_t i = 0; i < data->len; i++)
       {
-        Serial.write(Vendor.read());
+        Serial.write(Vendor->read());
       }
       break;
 
@@ -88,27 +91,17 @@ static void vendorEventCallback(void *arg, esp_event_base_t event_base, int32_t 
 }
 
 byte usbHIDVendorSize = 64;
-// callback function that will be executed when data is received
+float sumx = 16384 / 10;
+float sumy = 16384 / 10;
+// callback function that will be executed when data from esp_now is received
 void OnDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len)
 {
   memcpy(&myData, incomingData, sizeof(myData));
 
-  Serial.print(myData.ax);
-  Serial.print(',');
-  Serial.print(myData.ay);
-  Serial.print(',');
-  Serial.print(myData.az);
-  Serial.print(',');
-  Serial.print(myData.gx);
-  Serial.print(',');
-  Serial.print(myData.gy);
-  Serial.print(',');
-  Serial.print(myData.gz);
-  Serial.println();
-
   switch (config.mouseMode)
   {
   case Direct:
+  {
     int8_t varx = -myData.gy - 3.11;
     int8_t vary = myData.gz + 0.5;
 
@@ -121,11 +114,30 @@ void OnDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len)
       vary = 0;
     }
 
-    Mouse.move(varx, vary);
+    // Mouse.move(varx, vary);
+  }
+  break;
+  case Integration:
+  {
+    float varx = -myData.gy - 3.11 + 0.85 + 0.0599;
+    float vary = myData.gz + 0.5 + 0.17 + 0.0252;
 
-    break;
+    sumx += varx;
+    sumy += vary;
 
-  
+    Serial.print(">varx:");
+    Serial.println(varx);
+    Serial.print(">vary:");
+    Serial.println(vary);
+    Serial.print(">sumx:");
+    Serial.println(sumx);
+    Serial.print(">sumy:");
+    Serial.println(sumy);
+
+    if (abs(varx) <2 && abs(vary) < 2)
+      AbsMouse->move(sumx * 10, sumy * 10);
+  }
+  break;
   }
 }
 
@@ -142,13 +154,26 @@ void setup()
    *
    */
 
-  config.mouseMode = Direct;
-
   // Initialize Serial Monitor
   Serial.begin(115200);
 
-  Vendor.onEvent(vendorEventCallback);
-  Vendor.begin();
+  Vendor = new USBHIDVendor();
+  Vendor->onEvent(vendorEventCallback);
+  Vendor->begin();
+  Keyboard = new USBHIDKeyboard();
+  Keyboard->begin();
+
+  if (config.mouseMode == Direct)
+  {
+    Mouse = new USBHIDMouse();
+    Mouse->begin();
+  }
+  if (config.mouseMode == Integration)
+  {
+    AbsMouse = new USBHIDAbsoluteMouse();
+    AbsMouse->begin();
+  }
+
   USB.begin();
 
   // Set device as a Wi-Fi Station
@@ -180,5 +205,5 @@ void reportButtonState(int btn)
 void loop()
 {
   reportButtonState(0);
-  delay(10);
+  //  delay(10);
 }
